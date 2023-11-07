@@ -205,7 +205,7 @@ app.use('/speakers', async (req, res) => {
 });
 
 app.get('/motion-tools', async (req, res) => {
-  console.log('request from make.com recieved');
+  console.log('[MOTION_TOOLS] request from make.com recieved');
   let listUsers = [];
   const lists = await fetch('https://api.hubapi.com/contacts/v1/lists?count=200', {
     headers: {
@@ -217,7 +217,7 @@ app.get('/motion-tools', async (req, res) => {
   const motionToolLists = results.lists
     .filter((item) => item.name.includes('Motion tool'))
     .map((item) => ({ name: item.name, id: item.listId }));
-    
+
   for (const list of motionToolLists) {
     let usersValues = [];
 
@@ -233,53 +233,54 @@ app.get('/motion-tools', async (req, res) => {
 
     let offset = 0;
     const allContacts = [];
-        
+
     async function fetchContacts() {
       try {
-            while (true) {
-              const response = await fetch(`https://api.hubapi.com/contacts/v1/lists/${list.id}/contacts/all?count=100&vidOffset=${offset}`, {
-                headers: {
+        while (true) {
+          const response = await fetch(
+            `https://api.hubapi.com/contacts/v1/lists/${list.id}/contacts/all?count=100&vidOffset=${offset}`,
+            {
+              headers: {
                 Authorization: `Bearer ${process.env.AUTH}`,
-                },
-            });
-        
-              if (response.ok) {
-                const data = await response.json();
-                const contacts = data.contacts || [];
-                if (contacts.length === 0) {
-                  break;
-                }
-        
-                allContacts.push(...contacts);
-                if (offset == data['vid-offset']) {
-                    break
-                } else {
-                    offset = data['vid-offset'];
-                    console.log(offset);
-                }
-              } else {
-                console.error(`Error: ${response.status} - ${await response.text()}`);
-                break;
-              }
+              },
             }
-        
-            // Now 'allContacts' contains all the contacts from the list
-            console.log(`Total contacts retrieved: ${allContacts.length}`);
-            return allContacts;
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            const contacts = data.contacts || [];
+            if (contacts.length === 0) {
+              break;
+            }
+
+            allContacts.push(...contacts);
+            if (offset == data['vid-offset']) {
+              break;
+            } else {
+              offset = data['vid-offset'];
+              console.log('[MOTION_TOOLS] offset: ' + offset);
+            }
+          } else {
+            console.error(`[MOTION_TOOLS] Error: ${response.status} - ${await response.text()}`);
+            break;
+          }
+        }
+
+        // Now 'allContacts' contains all the contacts from the list
+        console.log(`[MOTION_TOOLS] Total contacts retrieved: ${allContacts.length}`);
+        return allContacts;
       } catch (error) {
-            console.error('An error occurred:', error);
+        console.error('[MOTION_TOOLS] An error occurred:', error);
       }
     }
-        
+
     const contacts = await fetchContacts();
 
     //for (const item of listValuesResponse.contacts) {
     for (const item of contacts) {
-
       let company = '';
 
       try {
-
         const getContactProperties = await fetch(`https://api.hubapi.com/contacts/v1/contact/vid/${item.vid}/profile`, {
           headers: {
             Authorization: `Bearer ${process.env.AUTH}`,
@@ -318,7 +319,6 @@ app.get('/motion-tools', async (req, res) => {
         // if(hasCompany){
         //   company = getConactPropResponse['associated-company'].properties.name.value
         // }
-        
 
         const userEmail = item['identity-profiles'][0].identities.filter((item) => item.type === 'EMAIL')[0].value;
         usersValues.push({
@@ -328,7 +328,6 @@ app.get('/motion-tools', async (req, res) => {
           party: company,
           email: userEmail,
         });
-
       } catch (e) {
         res.send('error');
       }
@@ -342,8 +341,9 @@ app.get('/motion-tools', async (req, res) => {
 
   //console.log(listUsers[0].users);
   //res.send(JSON.stringify(listUsers));
-  
+
   //send data to motion tool
+  console.log('[MOTION_TOOLS] Sending data to motion tool. Body: ', JSON.stringify(listUsers));
   const sendData = await fetch('https://egp-test.discuss.green/webhook/usersync', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'Test1234' },
@@ -352,14 +352,12 @@ app.get('/motion-tools', async (req, res) => {
   const responseSendData = await sendData.json();
 
   res.send(JSON.stringify(responseSendData));
-  
-
 });
 
 app.post('/list-users', async (req, res) => {
   const request = req.body;
 
-  console.log(request.listId);
+  console.log('[LIST_USERS] ', request.listId);
 
   if (!request) {
     res.send('no body');
@@ -400,7 +398,7 @@ app.post('/list-users', async (req, res) => {
 
       param = lastResult['vid-offset'];
     } catch (err) {
-      console.error(`Oeps, something is wrong ${err}`);
+      console.error(`[LIST_USERS] Ops, something is wrong ${err}`);
     }
     // keep running until there's no next page
   } while (lastResult['has-more'] == true);
