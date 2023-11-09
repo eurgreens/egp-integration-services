@@ -207,21 +207,23 @@ app.use('/speakers', async (req, res) => {
 app.get('/motion-tools', async (req, res) => {
   console.log('[MOTION_TOOLS] request from make.com recieved');
   let listUsers = [];
-  const lists = await fetch('https://api.hubapi.com/contacts/v1/lists?count=200', {
-    headers: {
-      Authorization: `Bearer ${process.env.AUTH}`,
-    },
-  });
-  const results = await lists.json();
 
-  const motionToolLists = results.lists
-    .filter((item) => item.name.includes('Motion tool'))
-    .map((item) => ({ name: item.name, id: item.listId }));
+  try {
+    const lists = await fetch('https://api.hubapi.com/contacts/v1/lists?count=200', {
+      headers: {
+        Authorization: `Bearer ${process.env.AUTH}`,
+      },
+    });
+    const results = await lists.json();
 
-  for (const list of motionToolLists) {
-    let usersValues = [];
+    const motionToolLists = results.lists
+      .filter((item) => item.name.includes('Motion tool'))
+      .map((item) => ({ name: item.name, id: item.listId }));
 
-    /*
+    for (const list of motionToolLists) {
+      let usersValues = [];
+
+      /*
     const listValues = await fetch(`https://api.hubapi.com/contacts/v1/lists/${list.id}/contacts/all?count=100`, {
       headers: {
         Authorization: `Bearer ${process.env.AUTH}`,
@@ -231,14 +233,58 @@ app.get('/motion-tools', async (req, res) => {
     const listValuesResponse = await listValues.json();
     */
 
-    let offset = 0;
-    const allContacts = [];
+      let offset = 0;
+      const allContacts = [];
 
-    async function fetchContacts() {
-      try {
-        while (true) {
-          const response = await fetch(
-            `https://api.hubapi.com/contacts/v1/lists/${list.id}/contacts/all?count=100&vidOffset=${offset}`,
+      async function fetchContacts() {
+        try {
+          while (true) {
+            const response = await fetch(
+              `https://api.hubapi.com/contacts/v1/lists/${list.id}/contacts/all?count=100&vidOffset=${offset}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${process.env.AUTH}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              const data = await response.json();
+              const contacts = data.contacts || [];
+              if (contacts.length === 0) {
+                break;
+              }
+
+              allContacts.push(...contacts);
+              if (offset == data['vid-offset']) {
+                break;
+              } else {
+                offset = data['vid-offset'];
+                console.log('[MOTION_TOOLS] offset: ' + offset);
+              }
+            } else {
+              console.error(`[MOTION_TOOLS] Error: ${response.status} - ${await response.text()}`);
+              break;
+            }
+          }
+
+          // Now 'allContacts' contains all the contacts from the list
+          console.log(`[MOTION_TOOLS] Total contacts retrieved: ${allContacts.length}`);
+          return allContacts;
+        } catch (error) {
+          console.error('[MOTION_TOOLS] An error occurred:', error);
+        }
+      }
+
+      const contacts = await fetchContacts();
+
+      //for (const item of listValuesResponse.contacts) {
+      for (const item of contacts) {
+        let company = '';
+
+        try {
+          const getContactProperties = await fetch(
+            `https://api.hubapi.com/contacts/v1/contact/vid/${item.vid}/profile`,
             {
               headers: {
                 Authorization: `Bearer ${process.env.AUTH}`,
@@ -246,112 +292,74 @@ app.get('/motion-tools', async (req, res) => {
             }
           );
 
-          if (response.ok) {
-            const data = await response.json();
-            const contacts = data.contacts || [];
-            if (contacts.length === 0) {
-              break;
-            }
+          const getConactPropResponse = await getContactProperties.json();
 
-            allContacts.push(...contacts);
-            if (offset == data['vid-offset']) {
-              break;
-            } else {
-              offset = data['vid-offset'];
-              console.log('[MOTION_TOOLS] offset: ' + offset);
+          const getMemberParty = await fetch(
+            `https://api.hubspot.com/crm/v3/objects/contacts/${item.vid}?associations=2-117824001`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.AUTH}`,
+              },
             }
-          } else {
-            console.error(`[MOTION_TOOLS] Error: ${response.status} - ${await response.text()}`);
-            break;
+          );
+
+          const responseMemberParty = await getMemberParty.json();
+          if (responseMemberParty?.associations?.p26289884_member_parties) {
+            for (const party of responseMemberParty.associations.p26289884_member_parties.results) {
+              if (party.type == 'contact_to_member_parties') {
+                const getPartyName = await fetch(
+                  `https://api.hubapi.com/crm/v3/objects/2-117824001/${party.id}?properties=member_party_name`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${process.env.AUTH}`,
+                    },
+                  }
+                );
+                const responsePartyName = await getPartyName.json();
+                company = responsePartyName.properties.member_party_name;
+              }
+            }
           }
-        }
+          // const hasCompany = getConactPropResponse['associated-company'].properties?.type?.value
+          // if(hasCompany){
+          //   company = getConactPropResponse['associated-company'].properties.name.value
+          // }
 
-        // Now 'allContacts' contains all the contacts from the list
-        console.log(`[MOTION_TOOLS] Total contacts retrieved: ${allContacts.length}`);
-        return allContacts;
-      } catch (error) {
-        console.error('[MOTION_TOOLS] An error occurred:', error);
+          const userEmail = item['identity-profiles'][0].identities.filter((item) => item.type === 'EMAIL')[0].value;
+          usersValues.push({
+            vid: item.vid,
+            name: item.properties.firstname ? item.properties.firstname.value : '',
+            lastName: item.properties.lastname ? item.properties.lastname.value : '',
+            party: company,
+            email: userEmail,
+          });
+        } catch (e) {
+          res.send('error');
+        }
       }
+
+      const listName = list.name.split('|')[1].trim();
+
+      //append to final list users
+      listUsers.push({ listName: listName, users: usersValues });
     }
 
-    const contacts = await fetchContacts();
+    //console.log(listUsers[0].users);
+    //res.send(JSON.stringify(listUsers));
 
-    //for (const item of listValuesResponse.contacts) {
-    for (const item of contacts) {
-      let company = '';
+    //send data to motion tool
+    console.log('[MOTION_TOOLS] Sending data to motion tool. Body: ', JSON.stringify(listUsers));
+    const sendData = await fetch('https://egp-test.discuss.green/webhook/usersync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'Test1234' },
+      body: JSON.stringify(listUsers),
+    });
+    const responseSendData = await sendData.json();
 
-      try {
-        const getContactProperties = await fetch(`https://api.hubapi.com/contacts/v1/contact/vid/${item.vid}/profile`, {
-          headers: {
-            Authorization: `Bearer ${process.env.AUTH}`,
-          },
-        });
-
-        const getConactPropResponse = await getContactProperties.json();
-
-        const getMemberParty = await fetch(
-          `https://api.hubspot.com/crm/v3/objects/contacts/${item.vid}?associations=2-117824001`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.AUTH}`,
-            },
-          }
-        );
-
-        const responseMemberParty = await getMemberParty.json();
-        if (responseMemberParty?.associations?.p26289884_member_parties) {
-          for (const party of responseMemberParty.associations.p26289884_member_parties.results) {
-            if (party.type == 'contact_to_member_parties') {
-              const getPartyName = await fetch(
-                `https://api.hubapi.com/crm/v3/objects/2-117824001/${party.id}?properties=member_party_name`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${process.env.AUTH}`,
-                  },
-                }
-              );
-              const responsePartyName = await getPartyName.json();
-              company = responsePartyName.properties.member_party_name;
-            }
-          }
-        }
-        // const hasCompany = getConactPropResponse['associated-company'].properties?.type?.value
-        // if(hasCompany){
-        //   company = getConactPropResponse['associated-company'].properties.name.value
-        // }
-
-        const userEmail = item['identity-profiles'][0].identities.filter((item) => item.type === 'EMAIL')[0].value;
-        usersValues.push({
-          vid: item.vid,
-          name: item.properties.firstname ? item.properties.firstname.value : '',
-          lastName: item.properties.lastname ? item.properties.lastname.value : '',
-          party: company,
-          email: userEmail,
-        });
-      } catch (e) {
-        res.send('error');
-      }
-    }
-
-    const listName = list.name.split('|')[1].trim();
-
-    //append to final list users
-    listUsers.push({ listName: listName, users: usersValues });
+    res.send(JSON.stringify(responseSendData));
+  } catch (error) {
+    res.status(400).send();
   }
-
-  //console.log(listUsers[0].users);
-  //res.send(JSON.stringify(listUsers));
-
-  //send data to motion tool
-  console.log('[MOTION_TOOLS] Sending data to motion tool. Body: ', JSON.stringify(listUsers));
-  const sendData = await fetch('https://egp-test.discuss.green/webhook/usersync', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'Test1234' },
-    body: JSON.stringify(listUsers),
-  });
-  const responseSendData = await sendData.json();
-
-  res.send(JSON.stringify(responseSendData));
 });
 
 app.post('/list-users', async (req, res) => {
