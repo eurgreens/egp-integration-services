@@ -358,6 +358,7 @@ app.get('/motion-tools', async (req, res) => {
 
     res.send(JSON.stringify(responseSendData));
   } catch (error) {
+    console.error(error);
     res.status(400).send();
   }
 });
