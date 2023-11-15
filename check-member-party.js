@@ -10,7 +10,7 @@ exports.checkMemberParty = async (user) => {
   });
   const responseMemberPartiesObjects = await memberPartiesObject.json();
 
-  console.log('Legnt size: ', responseMemberPartiesObjects.results.length);
+  console.log('Length size: ', responseMemberPartiesObjects.results.length);
 
   for (const party of responseMemberPartiesObjects.results) {
     const memberParty = await fetch(

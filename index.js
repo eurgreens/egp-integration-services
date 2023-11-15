@@ -348,7 +348,7 @@ app.get('/motion-tools', async (req, res) => {
     //res.send(JSON.stringify(listUsers));
 
     //send data to motion tool
-    console.log('[MOTION_TOOLS] Sending data to motion tool. Body: ', JSON.stringify(listUsers));
+    console.log('[MOTION_TOOLS] Sending data to motion tool.');
     const sendData = await fetch('https://egp-test.discuss.green/webhook/usersync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'Test1234' },
@@ -359,7 +359,7 @@ app.get('/motion-tools', async (req, res) => {
     console.log('[MOTIONS_TOOLS] Finish with success.');
     res.send(JSON.stringify(responseSendData));
   } catch (error) {
-    console.error(error);
+    console.error('[MOTIONS_TOOLS] ERROR: ', error);
     res.status(400).send();
   }
 });

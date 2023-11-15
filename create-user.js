@@ -24,6 +24,11 @@ exports.createUser = async (user, titoEvent, eventId, cancel = false) => {
     companyId = checkCompany;
   }
 
+  // TESTING COUNTRY FIELD
+  if (user.responses['what-is-your-country']) {
+    console.log('tiene country, value: ', user.responses['what-is-your-country']);
+  }
+
   // Test
   let representativeValues = '';
   if (user.responses['representative']) {
