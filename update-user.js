@@ -56,6 +56,10 @@ exports.updateUser = async (userId, user, titoEvent, eventId, cancel = false) =>
 
     console.log('[UPDATE_USER] Member party id: ', responseMemberParty);
 
+    if (user.responses['what-is-your-country']) {
+      console.log('tiene country, value: ', user.responses['what-is-your-country']);
+    }
+
     // get company from field value in hubspot
     if (user.responses['organisation']) {
       const checkCompany = await company.checkUserCompany(user);
@@ -92,6 +96,7 @@ exports.updateUser = async (userId, user, titoEvent, eventId, cancel = false) =>
         company: user.company_name,
         elected_official_type_v2: user.responses['representative'] ? representativeValues : null,
         staff_or_volunteer_type_v2: user.responses['staff'] ? staffValues : null,
+        country_multioption: user.responses['what-is-your-country'] ? user.responses['what-is-your-country'] : null,
       },
     };
 

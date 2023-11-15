@@ -58,6 +58,7 @@ exports.createUser = async (user, titoEvent, eventId, cancel = false) => {
         email: user.email,
         elected_official_type_v2: user.responses['representative'] ? representativeValues : null,
         staff_or_volunteer_type_v2: user.responses['staff'] ? staffValues : null,
+        country_multioption: user.responses['what-is-your-country'] ? user.responses['what-is-your-country'] : null,
       },
     };
   } else {
@@ -69,6 +70,7 @@ exports.createUser = async (user, titoEvent, eventId, cancel = false) => {
         email: user.email,
         elected_official_type_v2: user.responses['representative'] ? representativeValues : null,
         staff_or_volunteer_type_v2: user.responses['staff'] ? staffValues : null,
+        country_multioption: user.responses['what-is-your-country'] ? user.responses['what-is-your-country'] : null,
       },
       associations: [
         {
