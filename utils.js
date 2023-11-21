@@ -1,4 +1,4 @@
-const iso3166 = require('iso-3166-1');
+const fs = require('fs').promises;
 
 exports.assocTypeId = async (id) => {
   const name = id.toLowerCase().trim();
@@ -18,19 +18,23 @@ exports.assocTypeId = async (id) => {
   }
 };
 
-exports.translateCountry = (answers) => {
-  const countryAnswer = answers.find((a) => a?.question?.id === 1166850);
+exports.translateCountry = async (answers) => {
+  const countryAnswer = answers.find((a) => a?.question?.title === 'What is your country?');
   if (!countryAnswer) return null;
 
   const isoCode = countryAnswer.response;
+  if (!isoCode) return null;
 
   try {
-    const countryData = iso3166.whereAlpha2(isoCode);
+    const countriesJson = await fs.readFile('countries.json', 'utf-8');
+    const countriesData = JSON.parse(countriesJson);
+    const findCountry = countriesData.find((c) => c.cca2 === isoCode);
 
-    if (countryData) {
-      return countryData.country;
+    if (findCountry) {
+      console.log('Country FOUND: ', findCountry.name?.common);
+      return findCountry?.name?.common;
     } else {
-      throw new Error('Country not found');
+      throw new Error('Country name not found');
     }
   } catch (error) {
     console.error(`Error: ${error.message}`);
