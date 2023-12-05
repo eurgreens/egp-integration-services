@@ -47,7 +47,7 @@ exports.updateUser = async (userId, user, titoEvent, eventId, cancel = false) =>
     let associationTypeEvent = 167;
     let companyId = '';
 
-    if (user.release.metadata) {
+    if (user?.release?.metadata) {
       associationTypeEvent = await utils.assocTypeId(user.release.metadata.association);
     }
 

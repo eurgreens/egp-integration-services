@@ -32,29 +32,27 @@ app.post('/event-registration', async (req, res) => {
   }
 
   // from tickets loop and check if ticket users exists or not
-  for (const ticket of request.tickets) {
-    let userId = '';
-    const userExist = await checkUser.checkUserExist(ticket);
-    if (userExist == 'error') {
-      userId = await createUser.createUser(ticket, request.event, eventId);
-    } else {
-      userId = await updateUser.updateUser(userExist, ticket, request.event, eventId);
-    }
+  // for (const ticket of request.tickets) {
+  let userId = '';
+  const userExist = await checkUser.checkUserExist(request);
+  if (userExist == 'error') {
+    userId = await createUser.createUser(request, request.event, eventId);
+  } else {
+    userId = await updateUser.updateUser(userExist, request, request.event, eventId);
+  }
 
-    // Registered
-    let data = {
-      email: ticket.email || '',
-      event_name: request.event.title || '',
-      event_status: 'Registered',
-      first_name: ticket.first_name || '',
-      last_name: ticket.last_name || '',
-    };
+  // Registered
+  let data = {
+    email: request.email || '',
+    event_name: request.event.title || '',
+    event_status: 'Registered',
+    first_name: request.first_name || '',
+    last_name: request.last_name || '',
+  };
 
-    if (!data.email) {
-      console.log('[EVENT_REGISTRATION] Event timeline NOT triggered. Empty email.');
-      continue;
-    }
-
+  if (!data.email) {
+    console.log('[EVENT_REGISTRATION] Event timeline NOT triggered. Empty email.');
+  } else {
     const addTimeLineEvent = await fetch('https://hook.eu2.make.com/2wpuq49isnofksrg5nq89hqfgmtxaju1', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -64,6 +62,7 @@ app.post('/event-registration', async (req, res) => {
       console.log('[EVENT_REGISTRATION] Event timeline triggered. Data: ', JSON.stringify(data));
     }
   }
+  // }
 
   console.log('[EVENT_REGISTRATION] Finish');
   res.send(event);
@@ -272,7 +271,7 @@ app.get('/motion-tools', async (req, res) => {
           console.log(`[MOTION_TOOLS] Total contacts retrieved: ${allContacts.length}`);
           return allContacts;
         } catch (error) {
-          console.error('[MOTION_TOOLS] An error occurred:', error);
+          console.error('[MOTION_TOOLS] An error occurred:', JSON.stringify(error));
         }
       }
 
@@ -359,7 +358,7 @@ app.get('/motion-tools', async (req, res) => {
     console.log('[MOTIONS_TOOLS] Finish with success.');
     res.send(JSON.stringify(responseSendData));
   } catch (error) {
-    console.error('[MOTIONS_TOOLS] ERROR: ', error);
+    console.error('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(error));
     res.status(400).send();
   }
 });
