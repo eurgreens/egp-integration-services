@@ -333,6 +333,7 @@ app.get('/motion-tools', async (req, res) => {
             email: userEmail,
           });
         } catch (e) {
+          console.error('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(error));
           res.send('error');
         }
       }
@@ -359,6 +360,7 @@ app.get('/motion-tools', async (req, res) => {
     res.send(JSON.stringify(responseSendData));
   } catch (error) {
     console.error('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(error));
+    console.error('[MOTIONS_TOOLS] ERROR: ', error);
     res.status(400).send();
   }
 });
