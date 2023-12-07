@@ -347,7 +347,7 @@ app.get('/motion-tools', async (req, res) => {
     //console.log(listUsers[0].users);
     //res.send(JSON.stringify(listUsers));
 
-    console.log('List users: ', listUsers);
+    console.log('List users: ', JSON.stringify(listUsers));
 
     //send data to motion tool
     console.log('[MOTION_TOOLS] Sending data to motion tool.');
@@ -361,8 +361,8 @@ app.get('/motion-tools', async (req, res) => {
     console.log('[MOTIONS_TOOLS] Finish with success.');
     res.send(JSON.stringify(responseSendData));
   } catch (error) {
-    console.error('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(error));
-    console.error('[MOTIONS_TOOLS] ERROR: ', error);
+    console.log('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(error));
+    console.log('[MOTIONS_TOOLS] ERROR: ', error);
     res.status(400).send();
   }
 });
