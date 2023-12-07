@@ -347,6 +347,8 @@ app.get('/motion-tools', async (req, res) => {
     //console.log(listUsers[0].users);
     //res.send(JSON.stringify(listUsers));
 
+    console.log('List users: ', listUsers);
+
     //send data to motion tool
     console.log('[MOTION_TOOLS] Sending data to motion tool.');
     const sendData = await fetch('https://egp-test.discuss.green/webhook/usersync', {
