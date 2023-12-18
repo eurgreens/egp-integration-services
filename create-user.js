@@ -133,7 +133,9 @@ exports.createUser = async (user, titoEvent, eventId, cancel = false) => {
       },
       body: JSON.stringify(newUserProperties),
     });
+
     const responseCreateuser = await createUser.json();
+
     if (responseCreateuser.status == 'error') {
       console.log(responseCreateuser);
       throw new Error('error');
@@ -144,50 +146,53 @@ exports.createUser = async (user, titoEvent, eventId, cancel = false) => {
   }
 
   // update legals
-  const legalEventsBody = {
-    emailAddress: user.email,
-    subscriptionId: 239874603,
-    legalBasis: 'CONSENT_WITH_NOTICE',
-    legalBasisExplanation: `People opted in through event forms for the ${titoEvent.title}`,
-  };
+  if (!cancel) {
+    const legalEventsBody = {
+      emailAddress: user.email,
+      subscriptionId: 239874603,
+      legalBasis: 'CONSENT_WITH_NOTICE',
+      legalBasisExplanation: `People opted in through event forms for the ${titoEvent.title}`,
+    };
 
-  const legalMktBody = {
-    emailAddress: user.email,
-    subscriptionId: 153977537,
-    legalBasis: 'CONSENT_WITH_NOTICE',
-    legalBasisExplanation: `People opted in through event forms for the ${titoEvent.title}`,
-  };
+    const legalMktBody = {
+      emailAddress: user.email,
+      subscriptionId: 153977537,
+      legalBasis: 'CONSENT_WITH_NOTICE',
+      legalBasisExplanation: `People opted in through event forms for the ${titoEvent.title}`,
+    };
 
-  try {
-    const updateLegalsEvent = await fetch('https://api.hubapi.com/communication-preferences/v3/subscribe', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.AUTH}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(legalEventsBody),
-    });
-    const responseUpdateLegals = await updateLegalsEvent.json();
+    try {
+      const updateLegalsEvent = await fetch('https://api.hubapi.com/communication-preferences/v3/subscribe', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.AUTH}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(legalEventsBody),
+      });
+      const responseUpdateLegals = await updateLegalsEvent.json();
 
-    if (user.opt_ins.length > 0) {
-      const otpMarkeing = user.opt_ins.filter((item) => item.id == '490')[0];
-      console.log('[MARKETING] Is subscribed? ', JSON.stringify(otpMarkeing));
+      if (user.opt_ins.length > 0) {
+        const otpMarkeing = user.opt_ins.filter((item) => item.id == '490')[0];
+        console.log('[MARKETING] Is subscribed? ', JSON.stringify(otpMarkeing));
 
-      if (otpMarkeing && otpMarkeing.opted_in === true) {
-        const updateLegalsMkt = await fetch('https://api.hubapi.com/communication-preferences/v3/subscribe', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${process.env.AUTH}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(legalMktBody),
-        });
-        const responseUpdateLegalsMkt = await updateLegalsMkt.json();
+        if (otpMarkeing && otpMarkeing.opted_in === true) {
+          const updateLegalsMkt = await fetch('https://api.hubapi.com/communication-preferences/v3/subscribe', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.AUTH}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(legalMktBody),
+          });
+          const responseUpdateLegalsMkt = await updateLegalsMkt.json();
+        }
       }
+    } catch (e) {
+      console.log(e);
     }
-  } catch (e) {
-    console.log(e);
   }
+
   console.log(`${userId} created`);
   return userId;
 };
