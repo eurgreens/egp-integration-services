@@ -94,7 +94,7 @@ app.post('/event-cancel', async (req, res) => {
       let userId = '';
       const userExist = await checkUser.checkUserExist(ticket);
       if (userExist == 'error') {
-        userId = await createUser.createUser(ticket, request.event, true);
+        //userId = await createUser.createUser(ticket, request.event, true);
       } else {
         userId = await updateUser.updateUser(userExist, ticket, request.event, eventId, true);
       }
