@@ -208,10 +208,8 @@ app.get('/motion-tools', async (req, res) => {
   let listUsers = [];
 
   try {
-    const lists = await fetch('https://api.hubapi.com/contacts/v1/lists?count=200', {
-      headers: {
-        Authorization: `Bearer ${process.env.AUTH}`,
-      },
+    const lists = await fetch('https://api.hubapi.com/contacts/v1/lists?count=300', {
+      headers: { Authorization: `Bearer ${process.env.AUTH}` },
     });
     const results = await lists.json();
 
@@ -221,17 +219,6 @@ app.get('/motion-tools', async (req, res) => {
 
     for (const list of motionToolLists) {
       let usersValues = [];
-
-      /*
-    const listValues = await fetch(`https://api.hubapi.com/contacts/v1/lists/${list.id}/contacts/all?count=100`, {
-      headers: {
-        Authorization: `Bearer ${process.env.AUTH}`,
-      },
-    });
-
-    const listValuesResponse = await listValues.json();
-    */
-
       let offset = 0;
       const allContacts = [];
 
@@ -240,11 +227,7 @@ app.get('/motion-tools', async (req, res) => {
           while (true) {
             const response = await fetch(
               `https://api.hubapi.com/contacts/v1/lists/${list.id}/contacts/all?count=100&vidOffset=${offset}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${process.env.AUTH}`,
-                },
-              }
+              { headers: { Authorization: `Bearer ${process.env.AUTH}` } }
             );
 
             if (response.ok) {
@@ -255,6 +238,7 @@ app.get('/motion-tools', async (req, res) => {
               }
 
               allContacts.push(...contacts);
+
               if (offset == data['vid-offset']) {
                 break;
               } else {
@@ -274,51 +258,40 @@ app.get('/motion-tools', async (req, res) => {
           console.error('[MOTION_TOOLS] An error occurred:', JSON.stringify(error));
         }
       }
-
       const contacts = await fetchContacts();
 
-      //for (const item of listValuesResponse.contacts) {
       for (const item of contacts) {
         let company = '';
 
         try {
           const getContactProperties = await fetch(
             `https://api.hubapi.com/contacts/v1/contact/vid/${item.vid}/profile`,
-            {
-              headers: {
-                Authorization: `Bearer ${process.env.AUTH}`,
-              },
-            }
+            { headers: { Authorization: `Bearer ${process.env.AUTH}` } }
           );
 
-          const getConactPropResponse = await getContactProperties.json();
+          // const getConactPropResponse = await getContactProperties.json();
 
           const getMemberParty = await fetch(
             `https://api.hubspot.com/crm/v3/objects/contacts/${item.vid}?associations=2-117824001`,
-            {
-              headers: {
-                Authorization: `Bearer ${process.env.AUTH}`,
-              },
-            }
+            { headers: { Authorization: `Bearer ${process.env.AUTH}` } }
           );
 
           const responseMemberParty = await getMemberParty.json();
+
           if (responseMemberParty?.associations?.p26289884_member_parties) {
             for (const party of responseMemberParty.associations.p26289884_member_parties.results) {
               if (party.type == 'contact_to_member_parties') {
                 const getPartyName = await fetch(
                   `https://api.hubapi.com/crm/v3/objects/2-117824001/${party.id}?properties=member_party_name`,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${process.env.AUTH}`,
-                    },
-                  }
+                  { headers: { Authorization: `Bearer ${process.env.AUTH}` } }
                 );
+
                 const responsePartyName = await getPartyName.json();
                 company = responsePartyName.properties.member_party_name;
               }
             }
           }
+
           // const hasCompany = getConactPropResponse['associated-company'].properties?.type?.value
           // if(hasCompany){
           //   company = getConactPropResponse['associated-company'].properties.name.value
@@ -339,22 +312,18 @@ app.get('/motion-tools', async (req, res) => {
       }
 
       const listName = list.name.split('|')[1].trim();
-
-      //append to final list users
       listUsers.push({ listName: listName, users: usersValues });
     }
 
-    //console.log(listUsers[0].users);
-    //res.send(JSON.stringify(listUsers));
+    // Filtrar todas las listas cuyo valor 'users' esta vacio
+    const filteredListUsers = listUsers.filter((item) => Array.isArray(item.users) && item.users.length > 0);
+    // console.log('List users: ', JSON.stringify(filteredListUsers));
 
-    console.log('List users: ', JSON.stringify(listUsers));
-
-    //send data to motion tool
     console.log('[MOTION_TOOLS] Sending data to motion tool.');
     const sendData = await fetch('https://egp-test.discuss.green/webhook/usersync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'Test1234' },
-      body: JSON.stringify(listUsers),
+      body: JSON.stringify(filteredListUsers),
     });
     const responseSendData = await sendData.json();
 
