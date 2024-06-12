@@ -88,41 +88,38 @@ app.post('/event-cancel', async (req, res) => {
     console.log('[EVENT_CANCEL] Event ID not found. New event created, id: ', eventId);
   }
 
-  // from tickets loop and check if ticket users exists or not
-  if (request.tickets && request.tickets.length > 0) {
-    for (const ticket of request.tickets) {
-      let userId = '';
-      const userExist = await checkUser.checkUserExist(ticket);
-      if (userExist == 'error') {
-        //userId = await createUser.createUser(ticket, request.event, true);
-      } else {
-        userId = await updateUser.updateUser(userExist, ticket, request.event, eventId, true);
-      }
-
-      // Cancelled
-      let data = {
-        email: ticket.email || '',
-        event_name: request.event.title || '',
-        event_status: 'Cancelled',
-        first_name: ticket.first_name || '',
-        last_name: ticket.last_name || '',
-      };
-
-      if (!data.email) {
-        console.log('[EVENT_CANCEL] Event timeline NOT triggered. Empty email.');
-        continue;
-      }
-
-      const addTimeLineEvent = await fetch('https://hook.eu2.make.com/2wpuq49isnofksrg5nq89hqfgmtxaju1', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-
-      if (addTimeLineEvent.ok) {
-        console.log('[EVENT_CANCEL] Event timeline triggered. Data: ', JSON.stringify(data));
-      }
-    }
+  // void ticket
+  let userId = '';
+  const userExist = await checkUser.checkUserExist(request);
+  if (userExist == 'error') {
+    //userId = await createUser.createUser(ticket, request.event, true);
+  } else {
+    userId = await updateUser.updateUser(userExist, request, request.event, eventId, true);
   }
+
+  // Cancelled
+  let data = {
+    email: request.email || '',
+    event_name: request.event.title || '',
+    event_status: 'Cancelled',
+    first_name: request.first_name || '',
+    last_name: request.last_name || '',
+  };
+
+  if (!data.email) {
+    console.log('[EVENT_CANCEL] Event timeline NOT triggered. Empty email.');
+    return;
+  }
+
+  const addTimeLineEvent = await fetch('https://hook.eu2.make.com/2wpuq49isnofksrg5nq89hqfgmtxaju1', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+  if (addTimeLineEvent.ok) {
+    console.log('[EVENT_CANCEL] Event timeline triggered. Data: ', JSON.stringify(data));
+  }
+
 
   console.log('[EVENT_CANCEL] Finish');
   res.send('cancel');
@@ -130,7 +127,7 @@ app.post('/event-cancel', async (req, res) => {
 
 app.post('/event-attendence', async (req, res) => {
   console.log('[EVENT_ATTENDENCE] Check in place');
-  let event = {};
+
   const request = req.body;
 
   if (!request) {
