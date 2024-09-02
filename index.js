@@ -331,7 +331,7 @@ app.get('/motion-tools', async (req, res) => {
     const responseSendData = await sendData.json();
 
     console.log('[MOTIONS_TOOLS] Finish with success.');
-    res.send(JSON.stringify(responseSendData));
+    res.send(responseSendData);
   } catch (error) {
     console.log('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(error));
     console.log('[MOTIONS_TOOLS] ERROR: ', error);
