@@ -205,7 +205,7 @@ app.get('/motion-tools', async (req, res) => {
   let listUsers = [];
 
   try {
-    const lists = await fetch('https://api.hubapi.com/contacts/v1/lists?count=300', {
+    const lists = await fetch('https://api.hubapi.com/contacts/v1/lists?count=1000', {
       headers: { Authorization: `Bearer ${process.env.AUTH}` },
     });
     const results = await lists.json();
@@ -294,16 +294,22 @@ app.get('/motion-tools', async (req, res) => {
           //   company = getConactPropResponse['associated-company'].properties.name.value
           // }
 
-          const userEmail = item['identity-profiles'][0].identities.filter((item) => item.type === 'EMAIL')[0].value;
-          usersValues.push({
-            vid: item.vid,
-            name: item.properties.firstname ? item.properties.firstname.value : '',
-            lastName: item.properties.lastname ? item.properties.lastname.value : '',
-            party: company,
-            email: userEmail,
-          });
+          const userEmails = item['identity-profiles'][0].identities.filter((item) => item.type === 'EMAIL');
+
+          // Add only if user has an email
+          if (userEmails[0]) {
+            const userEmail = userEmails[0].value;
+
+            usersValues.push({
+              vid: item.vid,
+              name: item.properties.firstname ? item.properties.firstname.value : '',
+              lastName: item.properties.lastname ? item.properties.lastname.value : '',
+              party: company,
+              email: userEmail,
+            });
+          }
         } catch (e) {
-          console.error('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(error));
+          console.error('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(e));
           res.send('error');
         }
       }
