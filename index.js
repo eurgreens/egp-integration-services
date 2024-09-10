@@ -323,9 +323,9 @@ app.get('/motion-tools', async (req, res) => {
     // console.log('List users: ', JSON.stringify(filteredListUsers));
 
     console.log('[MOTION_TOOLS] Sending data to motion tool.');
-    const sendData = await fetch('https://egp-test.discuss.green/webhook/usersync', {
+    const sendData = await fetch(process.env.MOTION_TOOLS_API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Api-Key': 'Test1234' },
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': process.env.MOTION_TOOLS_API_KEY },
       body: JSON.stringify(filteredListUsers),
     });
     const responseSendData = await sendData.json();
