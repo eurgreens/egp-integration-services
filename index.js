@@ -202,6 +202,7 @@ app.use('/speakers', async (req, res) => {
 
 app.get('/motion-tools', async (req, res) => {
   console.log('[MOTION_TOOLS] request from make.com recieved');
+  res.send({status: 200})
   let listUsers = [];
 
   try {
@@ -310,12 +311,13 @@ app.get('/motion-tools', async (req, res) => {
           }
         } catch (e) {
           console.error('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(e));
-          res.send('error');
+          //res.send('error');
         }
       }
 
       const listName = list.name.split('|')[1].trim();
       listUsers.push({ listName: listName, users: usersValues });
+      console.log(`[MOTIONS_TOOLS] Users to update: ${listUsers.length}`);
     }
 
     // Filtrar todas las listas cuyo valor 'users' esta vacio
@@ -328,14 +330,12 @@ app.get('/motion-tools', async (req, res) => {
       headers: { 'Content-Type': 'application/json', 'X-Api-Key': process.env.MOTION_TOOLS_API_KEY },
       body: JSON.stringify(filteredListUsers),
     });
-    const responseSendData = await sendData.json();
 
     console.log('[MOTIONS_TOOLS] Finish with success.');
-    res.send(responseSendData);
+
   } catch (error) {
     console.log('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(error));
     console.log('[MOTIONS_TOOLS] ERROR: ', error);
-    res.status(400).send();
   }
 });
 
