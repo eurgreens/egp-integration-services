@@ -206,42 +206,66 @@ app.get('/motion-tools', async (req, res) => {
   let listUsers = [];
 
   try {
-    const lists = await fetch('https://api.hubapi.com/contacts/v1/lists?count=1000', {
-      headers: { Authorization: `Bearer ${process.env.AUTH}` },
+    const lists = await fetch('https://api.hubapi.com/crm/v3/lists/search', {
+      method: 'POST',
+      headers: { 
+        Authorization: `Bearer ${process.env.AUTH}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query: "Motion tool"
+      })
     });
     const results = await lists.json();
 
-    const motionToolLists = results.lists
-      .filter((item) => item.name.includes('Motion tool'))
+    const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
+    const motionToolLists = (results.lists || [])
+      .filter(item => {
+        // Exclude if name contains 'stop sync' (case-insensitive)
+        if (typeof item.name !== 'string') return false;
+        if (item.name.toLowerCase().includes('stop sync')) return false;
+        // Exclude if updatedAt is older than 1 year ago
+        // Accept both string and number timestamps
+        let updatedAt = item.updatedAt;
+        if (typeof updatedAt === 'string') updatedAt = Date.parse(updatedAt);
+        if (!updatedAt || updatedAt < oneYearAgo) return false;
+        return true;
+      })
       .map((item) => ({ name: item.name, id: item.listId }));
-
+    
+    if(motionToolLists.length == 0){
+      console.log('No list to sync')
+      return
+    }
     for (const list of motionToolLists) {
       let usersValues = [];
-      let offset = 0;
+      let after = undefined;
       const allContacts = [];
 
       async function fetchContacts() {
         try {
           while (true) {
+            let url = `https://api.hubapi.com/crm/v3/lists/${list.id}/memberships?limit=100`;
+            if (after) url += `&after=${encodeURIComponent(after)}`;
             const response = await fetch(
-              `https://api.hubapi.com/contacts/v1/lists/${list.id}/contacts/all?count=100&vidOffset=${offset}`,
+              url,
               { headers: { Authorization: `Bearer ${process.env.AUTH}` } }
             );
 
             if (response.ok) {
               const data = await response.json();
-              const contacts = data.contacts || [];
+              const contacts = data.results || [];
+              console.log(contacts.length);
               if (contacts.length === 0) {
                 break;
               }
 
               allContacts.push(...contacts);
 
-              if (offset == data['vid-offset']) {
-                break;
+              if (data.paging.next && data.paging.next.after) {
+                after = data.paging.next.after;
               } else {
-                offset = data['vid-offset'];
-                console.log('[MOTION_TOOLS] offset: ' + offset);
+                break;
               }
             } else {
               console.error(`[MOTION_TOOLS] Error: ${response.status} - ${await response.text()}`);
@@ -263,14 +287,14 @@ app.get('/motion-tools', async (req, res) => {
 
         try {
           const getContactProperties = await fetch(
-            `https://api.hubapi.com/contacts/v1/contact/vid/${item.vid}/profile`,
+            `https://api.hubapi.com/crm/v3/objects/contacts/${item.recordId}`,
             { headers: { Authorization: `Bearer ${process.env.AUTH}` } }
           );
 
-          // const getConactPropResponse = await getContactProperties.json();
+          const getConactPropResponse = await getContactProperties.json();
 
           const getMemberParty = await fetch(
-            `https://api.hubspot.com/crm/v3/objects/contacts/${item.vid}?associations=2-117824001`,
+            `https://api.hubspot.com/crm/v3/objects/contacts/${item.recordId}?associations=2-117824001`,
             { headers: { Authorization: `Bearer ${process.env.AUTH}` } }
           );
 
@@ -295,16 +319,15 @@ app.get('/motion-tools', async (req, res) => {
           //   company = getConactPropResponse['associated-company'].properties.name.value
           // }
 
-          const userEmails = item['identity-profiles'][0].identities.filter((item) => item.type === 'EMAIL');
+          const userEmail = getConactPropResponse.properties.email ?? null;
 
           // Add only if user has an email
-          if (userEmails[0]) {
-            const userEmail = userEmails[0].value;
+          if (userEmail) {
 
             usersValues.push({
-              vid: item.vid,
-              name: item.properties.firstname ? item.properties.firstname.value : '',
-              lastName: item.properties.lastname ? item.properties.lastname.value : '',
+              vid: getConactPropResponse.id,
+              name: getConactPropResponse.properties.firstname ? getConactPropResponse.properties.firstname : '',
+              lastName: getConactPropResponse.properties.lastname ? getConactPropResponse.properties.lastname : '',
               party: company,
               email: userEmail,
             });
