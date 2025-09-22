@@ -255,7 +255,6 @@ app.get('/motion-tools', async (req, res) => {
             if (response.ok) {
               const data = await response.json();
               const contacts = data.results || [];
-              console.log(contacts.length);
               if (contacts.length === 0) {
                 break;
               }
