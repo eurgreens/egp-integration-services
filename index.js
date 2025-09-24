@@ -120,7 +120,6 @@ app.post('/event-cancel', async (req, res) => {
     console.log('[EVENT_CANCEL] Event timeline triggered. Data: ', JSON.stringify(data));
   }
 
-
   console.log('[EVENT_CANCEL] Finish');
   res.send('cancel');
 });
@@ -167,16 +166,16 @@ app.post('/event-attendence', async (req, res) => {
 app.use('/speakers', async (req, res) => {
   try {
     let finalUsers = [];
-    const listPeople = await fetch('https://api.hubapi.com/contacts/v1/lists/79/contacts/all', {
+    const listPeople = await fetch('https://api.hubapi.com/crm/v3/lists/95/memberships', {
       headers: {
         Authorization: `Bearer ${process.env.AUTH}`,
       },
     });
     const results = await listPeople.json();
     // results.contacts.map(item => console.log(item.properties))
-    for (const contact of results.contacts) {
+    for (const contact of results.results) {
       const userFull = await fetch(
-        `https://api.hubapi.com/crm/v3/objects/contacts/${contact.vid}?properties=jobTitle,firstName,lastName,bio`,
+        `https://api.hubapi.com/crm/v3/objects/contacts/${contact.recordId}?properties=jobTitle,firstName,lastName,bio`,
         {
           headers: {
             Authorization: `Bearer ${process.env.AUTH}`,
@@ -202,25 +201,25 @@ app.use('/speakers', async (req, res) => {
 
 app.get('/motion-tools', async (req, res) => {
   console.log('[MOTION_TOOLS] request from make.com recieved');
-  res.send({status: 200})
+  res.send({ status: 200 });
   let listUsers = [];
 
   try {
     const lists = await fetch('https://api.hubapi.com/crm/v3/lists/search', {
       method: 'POST',
-      headers: { 
+      headers: {
         Authorization: `Bearer ${process.env.AUTH}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        query: "Motion tool"
-      })
+        query: 'Motion tool',
+      }),
     });
     const results = await lists.json();
 
     const oneYearAgo = Date.now() - 365 * 24 * 60 * 60 * 1000;
     const motionToolLists = (results.lists || [])
-      .filter(item => {
+      .filter((item) => {
         // Exclude if name contains 'stop sync' (case-insensitive)
         if (typeof item.name !== 'string') return false;
         if (item.name.toLowerCase().includes('stop sync')) return false;
@@ -232,10 +231,10 @@ app.get('/motion-tools', async (req, res) => {
         return true;
       })
       .map((item) => ({ name: item.name, id: item.listId }));
-    
-    if(motionToolLists.length == 0){
-      console.log('No list to sync')
-      return
+
+    if (motionToolLists.length == 0) {
+      console.log('No list to sync');
+      return;
     }
     for (const list of motionToolLists) {
       let usersValues = [];
@@ -247,10 +246,7 @@ app.get('/motion-tools', async (req, res) => {
           while (true) {
             let url = `https://api.hubapi.com/crm/v3/lists/${list.id}/memberships?limit=100`;
             if (after) url += `&after=${encodeURIComponent(after)}`;
-            const response = await fetch(
-              url,
-              { headers: { Authorization: `Bearer ${process.env.AUTH}` } }
-            );
+            const response = await fetch(url, { headers: { Authorization: `Bearer ${process.env.AUTH}` } });
 
             if (response.ok) {
               const data = await response.json();
@@ -285,10 +281,9 @@ app.get('/motion-tools', async (req, res) => {
         let company = '';
 
         try {
-          const getContactProperties = await fetch(
-            `https://api.hubapi.com/crm/v3/objects/contacts/${item.recordId}`,
-            { headers: { Authorization: `Bearer ${process.env.AUTH}` } }
-          );
+          const getContactProperties = await fetch(`https://api.hubapi.com/crm/v3/objects/contacts/${item.recordId}`, {
+            headers: { Authorization: `Bearer ${process.env.AUTH}` },
+          });
 
           const getConactPropResponse = await getContactProperties.json();
 
@@ -322,7 +317,6 @@ app.get('/motion-tools', async (req, res) => {
 
           // Add only if user has an email
           if (userEmail) {
-
             usersValues.push({
               vid: getConactPropResponse.id,
               name: getConactPropResponse.properties.firstname ? getConactPropResponse.properties.firstname : '',
@@ -354,7 +348,6 @@ app.get('/motion-tools', async (req, res) => {
     });
 
     console.log('[MOTIONS_TOOLS] Finish with success.');
-
   } catch (error) {
     console.log('[MOTIONS_TOOLS] ERROR: ', JSON.stringify(error));
     console.log('[MOTIONS_TOOLS] ERROR: ', error);
@@ -371,45 +364,28 @@ app.post('/list-users', async (req, res) => {
     return;
   }
   let users = [];
-  let lastResult = [];
-  let param = '';
-  // const getusersList = await fetch('https://api.hubapi.com/contacts/v1/lists/216/contacts/all', {
-  //   headers: {
-  //     Authorization: `Bearer ${process.env.AUTH}`
-  //   }
-  // })
-  // const responseGetUsersList = await getusersList.json()
-  // const usersIds = responseGetUsersList.contacts.map(item => item.vid)
-  // users.push(usersIds)
-  do {
-    // try catch to catch any errors in the async api call
-    try {
-      // use node-fetch to make api call
+  let after = undefined;
 
-      const getusersList = await fetch(
-        `https://api.hubapi.com/contacts/v1/lists/${request.listId}/contacts/all?count=100${
-          param ? `&vidOffset=${param}` : ''
-        }`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.AUTH}`,
-          },
-        }
-      );
-      const responseGetUsersList = await getusersList.json();
+  while (true) {
+    let url = `https://api.hubapi.com/crm/v3/lists/${request.listId}/memberships?limit=100`;
+    if (after) url += `&after=${encodeURIComponent(after)}`;
 
-      lastResult = responseGetUsersList;
+    const getusersList = await fetch(url, {
+      headers: { Authorization: `Bearer ${process.env.AUTH}` },
+    });
+    const responseGetUsersList = await getusersList.json();
 
-      const usersIds = responseGetUsersList.contacts.map((item) => item.vid);
+    if (responseGetUsersList.results && responseGetUsersList.results.length > 0) {
+      const usersIds = responseGetUsersList.results.map((item) => item.recordId);
       users.push(...usersIds);
-
-      param = lastResult['vid-offset'];
-    } catch (err) {
-      console.error(`[LIST_USERS] Ops, something is wrong ${err}`);
     }
-    // keep running until there's no next page
-  } while (lastResult['has-more'] == true);
 
+    if (responseGetUsersList.paging && responseGetUsersList.paging.next && responseGetUsersList.paging.next.after) {
+      after = responseGetUsersList.paging.next.after;
+    } else {
+      break;
+    }
+  }
   res.send(users);
 });
 
