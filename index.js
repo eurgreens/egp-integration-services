@@ -164,6 +164,10 @@ app.post('/event-attendence', async (req, res) => {
 });
 
 app.use('/speakers', async (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+
   try {
     let finalUsers = [];
     const listPeople = await fetch('https://api.hubapi.com/crm/v3/lists/95/memberships', {
@@ -171,8 +175,8 @@ app.use('/speakers', async (req, res) => {
         Authorization: `Bearer ${process.env.AUTH}`,
       },
     });
+
     const results = await listPeople.json();
-    // results.contacts.map(item => console.log(item.properties))
     for (const contact of results.results) {
       const userFull = await fetch(
         `https://api.hubapi.com/crm/v3/objects/contacts/${contact.recordId}?properties=jobTitle,firstName,lastName,bio`,
@@ -183,9 +187,10 @@ app.use('/speakers', async (req, res) => {
         }
       );
       const userResponse = await userFull.json();
+
       finalUsers.push({
         name: userResponse.properties.firstname,
-        code: userResponse.properties.vid,
+        code: userResponse.properties.vid, // use hs_object_id ?
         last_name: userResponse.properties.lastname,
         job_title: userResponse.properties.jobtitle,
         bio: userResponse.properties.bio,
@@ -195,7 +200,11 @@ app.use('/speakers', async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.send(finalUsers);
   } catch (e) {
-    res.send('error');
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+
+    res.status(500).json({ error: 'error' });
   }
 });
 
