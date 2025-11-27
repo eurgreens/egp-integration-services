@@ -177,24 +177,26 @@ app.use('/speakers', async (req, res) => {
     });
 
     const results = await listPeople.json();
-    for (const contact of results.results) {
-      const userFull = await fetch(
-        `https://api.hubapi.com/crm/v3/objects/contacts/${contact.recordId}?properties=jobTitle,firstName,lastName,bio`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.AUTH}`,
-          },
-        }
-      );
-      const userResponse = await userFull.json();
+    if (results && Array.isArray(results.results)) {
+      for (const contact of results.results) {
+        const userFull = await fetch(
+          `https://api.hubapi.com/crm/v3/objects/contacts/${contact.recordId}?properties=jobTitle,firstName,lastName,bio`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.AUTH}`,
+            },
+          }
+        );
+        const userResponse = await userFull.json();
 
-      finalUsers.push({
-        name: userResponse.properties?.firstname || '',
-        code: userResponse.properties?.vid, // use hs_object_id ?
-        last_name: userResponse.properties?.lastname || '',
-        job_title: userResponse.properties?.jobtitle || '',
-        bio: userResponse.properties?.bio || '',
-      });
+        finalUsers.push({
+          name: userResponse.properties?.firstname || '',
+          code: userResponse.properties?.vid, // use hs_object_id ?
+          last_name: userResponse.properties?.lastname || '',
+          job_title: userResponse.properties?.jobtitle || '',
+          bio: userResponse.properties?.bio || '',
+        });
+      }
     }
 
     res.set('Access-Control-Allow-Origin', '*');
