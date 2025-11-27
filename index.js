@@ -164,21 +164,40 @@ app.post('/event-attendence', async (req, res) => {
 });
 
 app.use('/speakers', async (req, res) => {
+  console.log('--- [/speakers] New request received ---');
+
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
 
   try {
     let finalUsers = [];
+
+    console.log('Fetching list memberships from HubSpot...');
     const listPeople = await fetch('https://api.hubapi.com/crm/v3/lists/95/memberships', {
       headers: {
         Authorization: `Bearer ${process.env.AUTH}`,
       },
     });
 
+    console.log('List memberships status:', listPeople.status);
+
     const results = await listPeople.json();
+    console.log('List memberships response JSON:', results);
+
+    if (!results) {
+      console.error('ERROR: results is null or undefined');
+    }
+
     if (results && Array.isArray(results.results)) {
+      console.log(`Processing ${results.results.length} contacts...`);
+
       for (const contact of results.results) {
+        if (!contact.recordId) {
+          console.error('ERROR: contact.recordId is missing:', contact);
+          continue;
+        }
+
         const userFull = await fetch(
           `https://api.hubapi.com/crm/v3/objects/contacts/${contact.recordId}?properties=jobTitle,firstName,lastName,bio`,
           {
@@ -199,14 +218,23 @@ app.use('/speakers', async (req, res) => {
       }
     }
 
+    console.log('Final list of users to return:', finalUsers.length);
+    console.log(finalUsers);
+
     res.set('Access-Control-Allow-Origin', '*');
     res.send(finalUsers);
+
+    console.log('--- [/speakers] Request completed successfully ---');
   } catch (e) {
+    console.error('--- [/speakers] ERROR ---');
+    console.error('Error message:', e.message);
+    console.error('Stack:', e.stack);
+
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
 
-    res.status(500).json({ error: 'error', message: e.message, stack: e.stack });
+    res.status(500).json({ error: 'error' });
   }
 });
 
