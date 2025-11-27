@@ -189,11 +189,11 @@ app.use('/speakers', async (req, res) => {
       const userResponse = await userFull.json();
 
       finalUsers.push({
-        name: userResponse.properties.firstname,
-        code: userResponse.properties.vid, // use hs_object_id ?
-        last_name: userResponse.properties.lastname,
-        job_title: userResponse.properties.jobtitle,
-        bio: userResponse.properties.bio,
+        name: userResponse.properties?.firstname || '',
+        code: userResponse.properties?.vid, // use hs_object_id ?
+        last_name: userResponse.properties?.lastname || '',
+        job_title: userResponse.properties?.jobtitle || '',
+        bio: userResponse.properties?.bio || '',
       });
     }
 
