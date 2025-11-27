@@ -204,7 +204,7 @@ app.use('/speakers', async (req, res) => {
     res.header('Access-Control-Allow-Methods', 'GET');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
 
-    res.status(500).json({ error: 'error' });
+    res.status(500).json({ error: 'error', msg: JSON.stringify(e) });
   }
 });
 
