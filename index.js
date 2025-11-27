@@ -183,6 +183,10 @@ app.use('/speakers', async (req, res) => {
     console.log('List memberships status:', listPeople.status);
 
     const results = await listPeople.json();
+    if (!listPeople.ok) {
+      console.log('Error: ', results);
+    }
+
     console.log('List memberships response JSON:', results);
 
     if (!results) {
@@ -219,7 +223,6 @@ app.use('/speakers', async (req, res) => {
     }
 
     console.log('Final list of users to return:', finalUsers.length);
-    console.log(finalUsers);
 
     res.set('Access-Control-Allow-Origin', '*');
     res.send(finalUsers);
