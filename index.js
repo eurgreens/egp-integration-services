@@ -375,7 +375,7 @@ app.get('/motion-tools', async (req, res) => {
 
       const listName = list.name.split('|')[1].trim();
       listUsers.push({ listName: listName, users: usersValues });
-      console.log(`[MOTIONS_TOOLS] Users to update: ${listUsers.length}`);
+      console.log(`[MOTION_TOOLS] Users to update: ${listUsers.map((item) => item.listName).join(', ')}`);
     }
 
     // Filtrar todas las listas cuyo valor 'users' esta vacio
